@@ -124,6 +124,7 @@ public class DetermineDocumentSize {
             System.out.println("Error reading the file");
         }
         else{
+            documentSize += 5;
             System.out.println("Total document size : " + documentSize + " bytes");
         }
     }
