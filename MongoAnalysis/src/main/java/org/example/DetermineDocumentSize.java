@@ -135,7 +135,7 @@ public class DetermineDocumentSize {
             System.out.println("Error reading the file");
         }
         else{
-            System.out.println("Total document size : " + overhead + " bytes");
+            System.out.println("Overhead : " + overhead + " bytes");
         }
     }
 }
