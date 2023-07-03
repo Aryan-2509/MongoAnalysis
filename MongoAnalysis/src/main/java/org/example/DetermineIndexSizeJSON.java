@@ -16,6 +16,10 @@ import java.util.Collections;
 import java.util.List;
 
 public class DetermineIndexSizeJSON extends Main{
+
+    static MongoDatabase database = client.getDatabase("sprinklr");
+    static String collectionName = "test2";
+    static MongoCollection<Document> collection = database.getCollection(collectionName);
     private static List<List<String>> getPermutations(List<String> strings) {
         List<List<String>> result = new ArrayList<>();
         backtrack(strings, new ArrayList<>(), result);
@@ -61,7 +65,7 @@ public class DetermineIndexSizeJSON extends Main{
         return false;
     }
 
-    public void findOverhead(String path, String dbname, String collection,ArrayList<String> indexArray,int numOfDocs,String field) throws IOException, JSONException {
+    public void findOverhead(String path,ArrayList<String> indexArray,int numOfDocs,String field) throws IOException, JSONException {
 
         ArrayList<ArrayList<String>> permutations = new ArrayList<>();
         ArrayList<Index> allIndexes = new ArrayList<>();
@@ -103,7 +107,7 @@ public class DetermineIndexSizeJSON extends Main{
             }
             indexName = indexName.substring(0,indexName.length()-1);
 
-            n = numberOfDocuments(path,dbname,collection,indexDocument,indexName,sparse,jsonArray);
+            n = numberOfDocuments(path,indexDocument,indexName,sparse,jsonArray);
             if(n == -1) {
                 System.out.println("Insufficient Documents");
                 return;
@@ -125,15 +129,20 @@ public class DetermineIndexSizeJSON extends Main{
         }
     }
 
-    public void findIndexSize(String path, String dbname, String collection,ArrayList<String> indexArray,int numOfDocs) throws JSONException, IOException {
+    public ArrayList<Index> findIndexSize(String path,ArrayList<String> indexArray,int numOfDocs,boolean permutation) throws JSONException, IOException {
         ArrayList<Index> allIndexes = new ArrayList<>();
         String jsonStr = new String(Files.readAllBytes(Paths.get(path)));
         JSONArray jsonArray = new JSONArray(jsonStr);
         boolean sparse = checkSparse(jsonArray,indexArray);
+        List<List<String>> permutations = new ArrayList<>();
         int n;
         int N;
 
-        List<List<String>> permutations = getPermutations(indexArray);
+        if(permutation){
+            permutations = getPermutations(indexArray);
+        }else{
+            permutations.add(indexArray);
+        }
 
         for(List<String> index : permutations) {
             String indexName = "";
@@ -145,11 +154,11 @@ public class DetermineIndexSizeJSON extends Main{
             }
 
             indexName = indexName.substring(0,indexName.length()-1);
-            n = numberOfDocuments(path,dbname, collection,indexDocument,indexName,sparse,jsonArray);
+            n = numberOfDocuments(path,indexDocument,indexName,sparse,jsonArray);
 
             if(n == -1){
                 System.out.println("Insufficient Documents");
-                return;
+                return new ArrayList<>();
             }else{
                 N = numOfDocs;
                 int indexSize = (int) ((Math.ceil((double)N/n) + 4)*4096);
@@ -159,16 +168,11 @@ public class DetermineIndexSizeJSON extends Main{
         }
 
         Collections.sort(allIndexes);
-
-        for(Index index : allIndexes) {
-            System.out.println(index.name + " : " + index.size + " bytes");
-        }
+        return allIndexes;
     }
 
-    public int numberOfDocuments(String path,String databaseName,String collectionName,Document indexDocument,String indexName,boolean sparse,JSONArray jsonArray) throws JSONException {
+    public int numberOfDocuments(String path,Document indexDocument,String indexName,boolean sparse,JSONArray jsonArray) throws JSONException {
         int numOfDocs = 0;
-        MongoDatabase database = client.getDatabase(databaseName);
-        MongoCollection<Document> collection = database.getCollection(collectionName);
         int i = 0;
         int n = jsonArray.length();
         int prev = 20480;
@@ -200,5 +204,38 @@ public class DetermineIndexSizeJSON extends Main{
         }
         collection.deleteMany(new Document());
         return numOfDocs-2;
+    }
+
+    public void indexDiagnosis(String path, String databaseName, String collectionName) throws JSONException, IOException {
+
+        MongoDatabase database = client.getDatabase(databaseName);
+        MongoCollection<Document> collection = database.getCollection(collectionName);
+        List<Document> indexes = (List<Document>) collection.listIndexes().into(new ArrayList<>());
+        Document stats = database.runCommand(new Document("collStats", collectionName)
+                .append("indexDetails", true));
+        int numOfDocs = stats.getInteger("count");
+        Document indexSizes = (Document) stats.get("indexSizes");
+        Document key;
+        String indexName;
+        ArrayList<String> indexFields;
+        ArrayList<Index> idealIndex;
+        int currentIndexSize;
+        int idealIndexSize;
+
+        for (Document index : indexes) {
+            indexName = index.getString("name");
+            if(indexName.equals("_id_")){
+                continue;
+            }
+            key = (Document) index.get("key");
+            indexFields = new ArrayList<>(key.keySet());
+            currentIndexSize = indexSizes.getInteger(indexName);
+            idealIndex = findIndexSize(path,indexFields,numOfDocs,false);
+            idealIndexSize = idealIndex.get(0).size;
+
+            if(currentIndexSize > 1.5*idealIndexSize){
+                System.out.println(indexName + " : current size = " + currentIndexSize + " bytes, expected index size : " + idealIndexSize + " bytes");
+            }
+        }
     }
 }
