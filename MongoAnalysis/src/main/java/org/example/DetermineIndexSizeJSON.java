@@ -9,8 +9,6 @@ import org.json.JSONException;
 import org.json.JSONObject;
 
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -65,13 +63,13 @@ public class DetermineIndexSizeJSON extends Main{
         return false;
     }
 
-    public void findOverhead(String path,ArrayList<String> indexArray,int numOfDocs,String field) throws IOException, JSONException {
+    public void findOverhead(String url,ArrayList<String> indexArray,int numOfDocs,String field) throws IOException, JSONException {
 
         ArrayList<ArrayList<String>> permutations = new ArrayList<>();
         ArrayList<Index> allIndexes = new ArrayList<>();
         int indexArraySize = indexArray.size();
-        String jsonStr = new String(Files.readAllBytes(Paths.get(path)));
-        JSONArray jsonArray = new JSONArray(jsonStr);
+        ReadLink read = new ReadLink();
+        JSONArray jsonArray = read.getJSONArray(url);
         int originalSize = 0;
         int n;
         int N;
@@ -107,7 +105,7 @@ public class DetermineIndexSizeJSON extends Main{
             }
             indexName = indexName.substring(0,indexName.length()-1);
 
-            n = numberOfDocuments(path,indexDocument,indexName,sparse,jsonArray);
+            n = numberOfDocuments(indexDocument,indexName,sparse,jsonArray);
             if(n == -1) {
                 System.out.println("Insufficient Documents");
                 return;
@@ -129,10 +127,10 @@ public class DetermineIndexSizeJSON extends Main{
         }
     }
 
-    public ArrayList<Index> findIndexSize(String path,ArrayList<String> indexArray,int numOfDocs,boolean permutation) throws JSONException, IOException {
+    public ArrayList<Index> findIndexSize(String url,ArrayList<String> indexArray,int numOfDocs,boolean permutation) throws JSONException, IOException {
         ArrayList<Index> allIndexes = new ArrayList<>();
-        String jsonStr = new String(Files.readAllBytes(Paths.get(path)));
-        JSONArray jsonArray = new JSONArray(jsonStr);
+        ReadLink read = new ReadLink();
+        JSONArray jsonArray = read.getJSONArray(url);
         boolean sparse = checkSparse(jsonArray,indexArray);
         List<List<String>> permutations = new ArrayList<>();
         int n;
@@ -154,7 +152,7 @@ public class DetermineIndexSizeJSON extends Main{
             }
 
             indexName = indexName.substring(0,indexName.length()-1);
-            n = numberOfDocuments(path,indexDocument,indexName,sparse,jsonArray);
+            n = numberOfDocuments(indexDocument,indexName,sparse,jsonArray);
 
             if(n == -1){
                 System.out.println("Insufficient Documents");
@@ -171,7 +169,7 @@ public class DetermineIndexSizeJSON extends Main{
         return allIndexes;
     }
 
-    public int numberOfDocuments(String path,Document indexDocument,String indexName,boolean sparse,JSONArray jsonArray) throws JSONException {
+    public int numberOfDocuments(Document indexDocument,String indexName,boolean sparse,JSONArray jsonArray) throws JSONException {
         int numOfDocs = 0;
         int i = 0;
         int n = jsonArray.length();

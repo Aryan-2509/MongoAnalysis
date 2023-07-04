@@ -1,16 +1,27 @@
 package org.example;
 
-import org.json.simple.JSONArray;
-import org.json.simple.JSONObject;
-import org.json.simple.parser.JSONParser;
-import java.io.FileReader;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
+import java.util.Iterator;
 
 public class DetermineDocumentSize {
-    private static String determineDataType(Object fieldValue) {
-        if (fieldValue instanceof String) {
-            return "String";
+
+    private static boolean isDateFormat(String value) {
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
+        dateFormat.setLenient(false);
+        try {
+            dateFormat.parse(value);
+            return true;
+        } catch (ParseException e) {
+            return false;
         }
-        else if (fieldValue instanceof Boolean) {
+    }
+    private static String determineDataType(Object fieldValue) {
+        if (fieldValue instanceof Boolean) {
             return "Boolean";
         }
         else if (fieldValue instanceof Number) {
@@ -25,17 +36,23 @@ public class DetermineDocumentSize {
         else if(fieldValue instanceof JSONArray) {
             return "Array";
         }
+        else if (fieldValue instanceof String && isDateFormat((String) fieldValue)) {
+            return "Date";
+        }
+        else if (fieldValue instanceof String) {
+            return "String";
+        }
         else {
             return "null";
         }
     }
 
-    private static int processJSONArray(JSONArray jsonArray) {
+    private static int processJSONArray(JSONArray jsonArray) throws JSONException {
 
         int size = 0;
 
-        for(Object arrayElement : jsonArray)
-        {
+        for(int i = 0 ; i < jsonArray.length() ; i++){
+            Object arrayElement = jsonArray.get(i);
             String datatype = determineDataType(arrayElement);
 
             if (datatype.equals("Object")) {
@@ -59,19 +76,21 @@ public class DetermineDocumentSize {
             else if(datatype.equals("null")) {
                 size += 3;
             }
+            else if(datatype.equals("Date")){
+                size += 11;
+            }
         }
 
         return size;
     }
 
-    private static int processJSONObject(JSONObject jsonObject)
-    {
+    private static int processJSONObject(JSONObject jsonObject) throws JSONException {
         int size = 0;
 
-        for (Object key : jsonObject.keySet())
-        {
+        for (Iterator it = jsonObject.keys(); it.hasNext(); ) {
+            Object key = it.next();
             String fieldName = (String) key;
-            Object fieldValue = jsonObject.get(key);
+            Object fieldValue = jsonObject.get((String) key);
             String dataType = determineDataType(fieldValue);
 
             if(dataType.equals("String")) {
@@ -98,28 +117,29 @@ public class DetermineDocumentSize {
             else if(dataType.equals("Double")) {
                 size += fieldName.length() + 10;
             }
+            else if(dataType.equals("Date")){
+                size += fieldName.length() + 10;
+            }
         }
 
         return size;
     }
 
-    private static int findSize(String jsonFilePath){
-        JSONParser parser = new JSONParser();
+    private static int findSize(String url) {
+        ReadLink read = new ReadLink();
+        JSONObject jsonObject = read.getJSONObject(url);
         int size;
 
-        try (FileReader fileReader = new FileReader(jsonFilePath)) {
-            Object obj = parser.parse(fileReader);
-            JSONObject jsonObject = (JSONObject) obj;
-            size= processJSONObject(jsonObject);
-            return size;
+        try {
+            size = processJSONObject(jsonObject);
+        } catch (JSONException e) {
+            size = -1;
         }
-        catch (Exception e) {
-            return -1;
-        }
+        return size;
     }
-    public static void findDocumentSize(String jsonFilePath) {
 
-        int documentSize = findSize(jsonFilePath);
+    public void findDocumentSize(String url) {
+        int documentSize = findSize(url);
         if(documentSize == -1){
             System.out.println("Error reading the file");
         }
@@ -129,8 +149,8 @@ public class DetermineDocumentSize {
         }
     }
 
-    public static void findOverhead(String jsonFilePath){
-        int overhead = findSize(jsonFilePath);
+    public void findOverhead(String url) {
+        int overhead = findSize(url);
         if(overhead == -1){
             System.out.println("Error reading the file");
         }
