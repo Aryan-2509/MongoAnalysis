@@ -7,7 +7,6 @@ import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -127,10 +126,15 @@ public class DetermineIndexSizeJSON extends Main{
         }
     }
 
-    public ArrayList<Index> findIndexSize(String url,ArrayList<String> indexArray,int numOfDocs,boolean permutation) throws JSONException, IOException {
-        ArrayList<Index> allIndexes = new ArrayList<>();
+    public ArrayList<Index> findIndexSize(String url,ArrayList<String> indexArray,int numOfDocs,boolean permutation) throws JSONException, IOException{
         ReadLink read = new ReadLink();
         JSONArray jsonArray = read.getJSONArray(url);
+
+        return findIndexSizeHelper(url,indexArray,numOfDocs,permutation,jsonArray);
+    }
+
+    public ArrayList<Index> findIndexSizeHelper(String url,ArrayList<String> indexArray,int numOfDocs,boolean permutation,JSONArray jsonArray) throws JSONException, IOException {
+        ArrayList<Index> allIndexes = new ArrayList<>();
         boolean sparse = checkSparse(jsonArray,indexArray);
         List<List<String>> permutations = new ArrayList<>();
         int n;
@@ -209,8 +213,7 @@ public class DetermineIndexSizeJSON extends Main{
         MongoDatabase database = client.getDatabase(databaseName);
         MongoCollection<Document> collection = database.getCollection(collectionName);
         List<Document> indexes = (List<Document>) collection.listIndexes().into(new ArrayList<>());
-        Document stats = database.runCommand(new Document("collStats", collectionName)
-                .append("indexDetails", true));
+        Document stats = database.runCommand(new Document("collStats", collectionName).append("indexDetails", true));
         int numOfDocs = stats.getInteger("count");
         Document indexSizes = (Document) stats.get("indexSizes");
         Document key;
@@ -219,6 +222,8 @@ public class DetermineIndexSizeJSON extends Main{
         ArrayList<Index> idealIndex;
         int currentIndexSize;
         int idealIndexSize;
+        ReadLink read = new ReadLink();
+        JSONArray jsonArray = read.getJSONArray(path);
 
         for (Document index : indexes) {
             indexName = index.getString("name");
@@ -228,9 +233,13 @@ public class DetermineIndexSizeJSON extends Main{
             key = (Document) index.get("key");
             indexFields = new ArrayList<>(key.keySet());
             currentIndexSize = indexSizes.getInteger(indexName);
-            idealIndex = findIndexSize(path,indexFields,numOfDocs,false);
-            idealIndexSize = idealIndex.get(0).size;
+            idealIndex = findIndexSizeHelper(path,indexFields,numOfDocs,false,jsonArray);
 
+            if(idealIndex.size() == 0){
+                System.out.println("Insufficient Documents");
+                return;
+            }
+            idealIndexSize = idealIndex.get(0).size;
             if(currentIndexSize > 1.5*idealIndexSize){
                 System.out.println(indexName + " : current size = " + currentIndexSize + " bytes, expected index size : " + idealIndexSize + " bytes");
             }
