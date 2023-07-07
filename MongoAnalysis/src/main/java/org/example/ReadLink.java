@@ -3,27 +3,30 @@ package org.example;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
+import org.json.JSONTokener;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 public class ReadLink {
 
-    public JSONArray getJSONArray(String url){
+    private static final Logger logger = Logger.getLogger(DetermineDocumentSize.class.getName());
+    public JSONArray getJSONArray(String url) {
 
         JSONArray jsonArray = new JSONArray();
         try {
             String jsonData = readURL(url);
-            System.out.println("URL READ");
             jsonArray = new JSONArray(jsonData);
         } catch (Exception e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "An error occurred", e);
+            throw new RuntimeException(e);
         }
 
-        System.out.println(jsonArray.length() + " documents read");
         return jsonArray;
     }
 
@@ -47,8 +50,8 @@ public class ReadLink {
     }
 
     public JSONObject getJSONObject(String inputUrl) {
+        JSONObject jsonObject = null;
 
-        JSONObject jsonObject = new JSONObject();
         try {
             URL url = new URL(inputUrl);
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.UTF_8));
@@ -59,10 +62,18 @@ public class ReadLink {
                 jsonString.append(line);
             }
 
-            jsonObject = new JSONObject(jsonString.toString());
+            Object data = new JSONTokener(jsonString.toString()).nextValue();
+
+            if (data instanceof JSONObject) {
+                jsonObject = (JSONObject) data;
+            } else if (data instanceof JSONArray) {
+                logger.log(Level.SEVERE, "ERROR: JSONArray is an invalid input");
+                throw new RuntimeException("ERROR: JSONArray is an invalid input");
+            }
             reader.close();
         } catch (IOException | JSONException e) {
-            e.printStackTrace();
+            logger.log(Level.SEVERE, "An error occurred", e);
+            throw new RuntimeException(e);
         }
         return jsonObject;
     }

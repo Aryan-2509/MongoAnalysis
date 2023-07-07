@@ -3,23 +3,28 @@ package org.example;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
-import java.text.ParseException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Iterator;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-public class DetermineDocumentSize {
+public class DetermineDocumentSize implements DetermineDocumentSizeService{
+    private static final Logger logger = Logger.getLogger(DetermineDocumentSize.class.getName());
 
-    private static boolean isDateFormat(String value) {
-        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd");
-        dateFormat.setLenient(false);
+    private static boolean isMongoDBIsoDate(String value) {
         try {
-            dateFormat.parse(value);
+            LocalDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME);
             return true;
-        } catch (ParseException e) {
+        } catch (Exception e) {
             return false;
         }
     }
     private static String determineDataType(Object fieldValue) {
+
+        if(fieldValue == null){
+            return "null";
+        }
         if (fieldValue instanceof Boolean) {
             return "Boolean";
         }
@@ -35,14 +40,16 @@ public class DetermineDocumentSize {
         else if(fieldValue instanceof JSONArray) {
             return "Array";
         }
-        else if (fieldValue instanceof String && isDateFormat((String) fieldValue)) {
-            return "Date";
-        }
         else if (fieldValue instanceof String) {
+            String strValue = (String) fieldValue;
+            if (isMongoDBIsoDate(strValue)) {
+                return "Date";
+            }
             return "String";
         }
         else {
-            return "null";
+            logger.log(Level.SEVERE, "ERROR: Unexpected data type");
+            throw new RuntimeException("ERROR: Unexpected data type");
         }
     }
 
@@ -54,29 +61,25 @@ public class DetermineDocumentSize {
             Object arrayElement = jsonArray.get(i);
             String datatype = determineDataType(arrayElement);
 
-            if (datatype.equals("Object")) {
-                JSONObject jsonObject = (JSONObject) arrayElement;
-                int objSize = processJSONObject(jsonObject) + 7 + 1;
-                size += objSize;
-            }
-            else if(datatype.equals("Number")) {
-                size += 7;
-            }
-            else if(datatype.equals("Boolean")) {
-                size += 4;
-            }
-            else if(datatype.equals("Double")) {
-                size += 11;
-            }
-            else if(datatype.equals("String")) {
-                String fieldValue = arrayElement.toString();
-                size += 8 + fieldValue.length();
-            }
-            else if(datatype.equals("null")) {
-                size += 3;
-            }
-            else if(datatype.equals("Date")){
-                size += 11;
+            switch (datatype) {
+                case "Object" -> {
+                    JSONObject jsonObject = (JSONObject) arrayElement;
+                    int objSize = processJSONObject(jsonObject) + 7 + 1;
+                    size += objSize;
+                }
+                case "Number" -> size += 7;
+                case "Boolean" -> size += 4;
+                case "Double" -> size += 11;
+                case "String" -> {
+                    String fieldValue = arrayElement.toString();
+                    size += 8 + fieldValue.length();
+                }
+                case "null" -> size += 3;
+                case "Date" -> size += 11;
+                case "Array" -> {
+                    JSONArray nestedArray = (JSONArray) arrayElement;
+                    size += processJSONArray(nestedArray) + 7 + 1;
+                }
             }
         }
 
@@ -86,44 +89,34 @@ public class DetermineDocumentSize {
     private static int processJSONObject(JSONObject jsonObject) throws JSONException {
         int size = 0;
 
-        for (Iterator it = jsonObject.keys(); it.hasNext(); ) {
+        for(Iterator it = jsonObject.keys(); it.hasNext(); ) {
             Object key = it.next();
             String fieldName = (String) key;
             Object fieldValue = jsonObject.get((String) key);
             String dataType = determineDataType(fieldValue);
 
-            if(dataType.equals("String")) {
-                String fieldVal = (String) jsonObject.get(fieldName);
-                size += 7 + fieldName.length() + fieldVal.length();
-            }
-            else if(dataType.equals("Boolean")) {
-                size += fieldName.length() + 3;
-            }
-            else if(dataType.equals("Number")) {
-                size += fieldName.length() + 6;
-            }
-            else if(dataType.equals("Object")) {
-                int objSize = processJSONObject((JSONObject) fieldValue);
-                size += objSize + fieldName.length() + 7;
-            }
-            else if(dataType.equals("Array")) {
-                int arraySize = processJSONArray((JSONArray) fieldValue);
-                size += arraySize + fieldName.length() + 7;
-            }
-            else if(dataType.equals("null")) {
-                size += fieldName.length() + 2;
-            }
-            else if(dataType.equals("Double")) {
-                size += fieldName.length() + 10;
-            }
-            else if(dataType.equals("Date")){
-                size += fieldName.length() + 10;
+            switch (dataType) {
+                case "String" -> {
+                    String fieldVal = (String) jsonObject.get(fieldName);
+                    size += 7 + fieldName.length() + fieldVal.length();
+                }
+                case "Boolean" -> size += fieldName.length() + 3;
+                case "Number" -> size += fieldName.length() + 6;
+                case "Object" -> {
+                    int objSize = processJSONObject((JSONObject) fieldValue);
+                    size += objSize + fieldName.length() + 7;
+                }
+                case "Array" -> {
+                    int arraySize = processJSONArray((JSONArray) fieldValue);
+                    size += arraySize + fieldName.length() + 7;
+                }
+                case "null" -> size += fieldName.length() + 2;
+                case "Double" -> size += fieldName.length() + 10;
+                case "Date" -> size += fieldName.length() - 2;
             }
         }
-
         return size;
     }
-
     private static int findSize(String url) {
         ReadLink read = new ReadLink();
         JSONObject jsonObject = read.getJSONObject(url);
@@ -132,29 +125,19 @@ public class DetermineDocumentSize {
         try {
             size = processJSONObject(jsonObject);
         } catch (JSONException e) {
-            size = -1;
+            logger.log(Level.SEVERE, "An error occurred", e);
+            throw new RuntimeException(e);
         }
+
         return size;
     }
-
-    public void findDocumentSize(String url) {
-        int documentSize = findSize(url);
-        if(documentSize == -1){
-            System.out.println("Error reading the file");
-        }
-        else{
-            documentSize += 5;
-            System.out.println("Total document size : " + documentSize + " bytes");
-        }
+    @Override
+    public int findDocumentSize(String url) {
+        return findSize(url) + 5;
     }
 
-    public void findOverhead(String url) {
-        int overhead = findSize(url);
-        if(overhead == -1){
-            System.out.println("Error reading the file");
-        }
-        else{
-            System.out.println("Overhead : " + overhead + " bytes");
-        }
+    @Override
+    public int findOverhead(String url) {
+        return findSize(url);
     }
 }

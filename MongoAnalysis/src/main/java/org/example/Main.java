@@ -1,23 +1,20 @@
 package org.example;
 
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import org.json.JSONException;
-import java.io.IOException;
-
 public class Main {
-    public static MongoClient client = MongoClients.create("mongodb://localhost:27017");
-    public static void main(String[] args) throws JSONException, IOException {
 
-        //CALCULATE DOCUMENT SIZE
+    public static void main(String[] args) {
+
+//        CALCULATE DOCUMENT SIZE
+//        Use Jackson Mappers to determine class.
 //        DetermineDocumentSize det = new DetermineDocumentSize();
-//        det.findDocumentSize(URL OF THE JSON DOCUMENT);
-//        det.findOverhead(URL OF JSON OBJECT);
+//        int size = det.findDocumentSize(URL OF JSON DOCUMENT);
+//        int overhead = det.findOverhead(URL OF JSON DOCUMENT);
 
-        //DETERMINE INDEX SIZE OF ALL PERMUTATIONS OVER GIVEN FIELDS
-//        DetermineIndexSizeJSON obj = new DetermineIndexSizeJSON();
-//        ArrayList<Index> allIndexes = obj.findIndexSize(URL OF DATA,INDEX ARRAY,NUMBER OF DOCUMENTS,PERMUTATIONS REQUIRED OR NOT);
-//        obj.findOverhead(URL OF DATA,INDEX ARRAY,NUMBER OF DOCUMENTS,FIELD NAME);
-//        obj.indexDiagnosis(URL OF DATA,DATABASE NAME,COLLECTION NAME);
+//        DETERMINE INDEX SIZE OF ALL PERMUTATIONS OVER GIVEN FIELDS
+//        DetermineIndexSizeService obj = new DetermineIndexSizeService();
+//        DetermineIndexSize obj = new DetermineIndexSize();
+//        List<Index> allIndexes = obj.findIndexSize(URL OF JSON ARRAY,INDEX ARRAY,NUMBER OF DOCUMENTS,PERMUTATION REQUIRED OR NOT);
+//        List<IndexOverhead> allIndexes = obj.findOverhead(URL OF JSON ARRAY,INDEX ARRAY,NUMBER OF DOCUMENTS,FIELD TO BE ADDED);
+//        List<FaultyIndex> allIndexes = obj.indexDiagnosis(URL OF JSON ARRAY,DATABASE NAME,COLLECTION NAME);
     }
 }
