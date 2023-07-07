@@ -14,16 +14,15 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 public class ReadLink {
-
     private static final Logger logger = Logger.getLogger(DetermineDocumentSize.class.getName());
     public JSONArray getJSONArray(String url) {
-
         JSONArray jsonArray = new JSONArray();
+
         try {
             String jsonData = readURL(url);
             jsonArray = new JSONArray(jsonData);
         } catch (Exception e) {
-            logger.log(Level.SEVERE, "An error occurred", e);
+            logger.log(Level.SEVERE, "ERROR: ", e);
             throw new RuntimeException(e);
         }
 

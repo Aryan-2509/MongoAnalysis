@@ -6,6 +6,7 @@ public class Main {
 
 //        CALCULATE DOCUMENT SIZE
 //        Use Jackson Mappers to determine class.
+
 //        DetermineDocumentSize det = new DetermineDocumentSize();
 //        int size = det.findDocumentSize(URL OF JSON DOCUMENT);
 //        int overhead = det.findOverhead(URL OF JSON DOCUMENT);

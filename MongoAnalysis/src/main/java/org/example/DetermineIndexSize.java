@@ -38,8 +38,8 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         }
         for (String str : strings) {
             if(str == null){
-                logger.log(Level.SEVERE, "Error: Field name can't be Null");
-                throw new RuntimeException("Error: Field name can't be Null");
+                logger.log(Level.SEVERE, "ERROR: Field name can't be Null");
+                throw new RuntimeException("ERROR: Field name can't be Null");
             }
             if (!currentPermutation.contains(str)) {
                 currentPermutation.add(str);
@@ -58,31 +58,32 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         return collectionExists;
     }
 
-    boolean areFieldsPresent(JSONArray jsonArray,List<String> indexArray){
-
+    boolean areFieldsPresent(JSONArray jsonArray, List<String> indexArray) {
         for (String fieldName : indexArray) {
-
-            if(fieldName == null){
-                logger.log(Level.SEVERE, "Error: Field name can't be Null");
-                throw new RuntimeException("Error: Field name can't be Null");
+            if (fieldName == null) {
+                logger.log(Level.SEVERE, "ERROR: Field name can't be Null");
+                throw new RuntimeException("ERROR: Field name can't be Null");
             }
+
             boolean isFieldPresent = false;
             for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject document = null;
+                JSONObject document;
                 try {
                     document = jsonArray.getJSONObject(i);
+                    if (document.has(fieldName)) {
+                        isFieldPresent = true;
+                        break;
+                    }
                 } catch (JSONException e) {
                     throw new RuntimeException(e);
                 }
-                if (document.has(fieldName)) {
-                    isFieldPresent = true;
-                    break;
-                }
             }
+
             if (!isFieldPresent) {
                 return false;
             }
         }
+
         return true;
     }
 
@@ -106,7 +107,6 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         JSONObject jsonObject;
 
         for (int i = 0; i < jsonArraySize; i++) {
-
             try {
                 jsonObject = jsonArray.getJSONObject(i);
             } catch (JSONException e) {
@@ -145,13 +145,14 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         return false;
     }
 
+
     private static int getIndexSizeCollStats(String indexName){
         Document stats = database.runCommand(new Document("collStats", collectionName).append("indexDetails", true));
         Document indexDetails = (Document) stats.get("indexSizes");
         return indexDetails.getInteger(indexName);
     }
 
-    private int numberOfDocuments(Document indexDocument, String indexName, boolean sparse, JSONArray jsonArray){
+    private int numberOfDocuments(Document indexDocument, String indexName, boolean sparse, JSONArray jsonArray) {
         int numOfDocs = 0;
         int i = 0;
         int n = jsonArray.length();
@@ -193,6 +194,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         return numOfDocs - 2;
     }
 
+
     private List<Index> findIndexSizeHelper(List<String> indexArray, int numOfDocs, boolean permutation, JSONArray jsonArray) throws JSONException, IOException {
         ArrayList<Index> allIndexes = new ArrayList<>();
         boolean sparse = checkSparse(jsonArray, indexArray);
@@ -228,7 +230,6 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
 
     @Override
     public List<IndexOverhead> findOverhead(String url, List<String> indexArray, int numOfDocs, String field) {
-
         List<List<String>> permutations = new ArrayList<>();
         ArrayList<IndexOverhead> allIndexes = new ArrayList<>();
         ReadLink read = new ReadLink();
@@ -238,15 +239,15 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         int numOfDocsLocal;
 
         indexArray.add(field);
-        boolean fieldsPresent = areFieldsPresent(jsonArray,indexArray);
+        boolean fieldsPresent = areFieldsPresent(jsonArray, indexArray);
         boolean duplicateFields = checkDuplicateFields(indexArray);
 
-        if(!fieldsPresent){
+        if (!fieldsPresent) {
             logger.log(Level.SEVERE, "Error: Field absent from data");
             throw new RuntimeException("Error: Field absent from data");
         }
 
-        if(duplicateFields){
+        if (duplicateFields) {
             logger.log(Level.SEVERE, "Error: Repeated field names found");
             throw new RuntimeException("Error: Repeated field names found");
         }
@@ -272,16 +273,16 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
 
         boolean sparse = checkSparse(jsonArray, permutations.get(1));
 
-        for(int i = 0 ; i < permutations.size(); i++){
+        for (int i = 0; i < permutations.size(); i++) {
             try {
-                List<Index> index = findIndexSizeHelper(permutations.get(i),numOfDocs,false,jsonArray);
+                List<Index> indexList = findIndexSizeHelper(permutations.get(i), numOfDocs, false, jsonArray);
 
-                if(i == 0){
-                    originalSize = index.get(0).size;
-                }else{
-                    int overhead = index.get(0).size - originalSize;
-                    String indexName = index.get(0).name;
-                    IndexOverhead indexOverhead = new IndexOverhead(indexName,overhead);
+                if (i == 0) {
+                    originalSize = indexList.get(0).size;
+                } else {
+                    int overhead = indexList.get(0).size - originalSize;
+                    String indexName = indexList.get(0).name;
+                    IndexOverhead indexOverhead = new IndexOverhead(indexName, overhead);
                     allIndexes.add(indexOverhead);
                 }
 
@@ -300,23 +301,24 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         return allIndexes;
     }
 
+
     // name
     @Override
-    public List<Index> findIndexSize(String url, List<String> indexArray, int numOfDocs, boolean permutation){
+    public List<Index> findIndexSize(String url, List<String> indexArray, int numOfDocs, boolean permutation) {
         ReadLink read = new ReadLink();
         JSONArray jsonArray = read.getJSONArray(url);
 
-        boolean fieldsPresent = areFieldsPresent(jsonArray,indexArray);
+        boolean fieldsPresent = areFieldsPresent(jsonArray, indexArray);
         boolean duplicateFields = checkDuplicateFields(indexArray);
 
-        if(!fieldsPresent){
-            logger.log(Level.SEVERE, "Error: Field absent from data");
-            throw new RuntimeException("Error: Field absent from data");
+        if (!fieldsPresent) {
+            logger.log(Level.SEVERE, "ERROR: Field absent from data");
+            throw new RuntimeException("ERROR: Field absent from data");
         }
 
-        if(duplicateFields){
-            logger.log(Level.SEVERE, "Error: Repeated field names found");
-            throw new RuntimeException("Error: Repeated field names found");
+        if (duplicateFields) {
+            logger.log(Level.SEVERE, "ERROR: Repeated field names found");
+            throw new RuntimeException("ERROR: Repeated field names found");
         }
 
         try {
@@ -330,10 +332,11 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         }
     }
 
+
     @Override
     public List<FaultyIndex> indexDiagnosis(String path, String databaseName, String collectionName) {
-        boolean databaseAndCollectionExist = checkDatabaseAndCollectionExistence(databaseName,collectionName);
-        if(!databaseAndCollectionExist){
+        boolean databaseAndCollectionExist = checkDatabaseAndCollectionExistence(databaseName, collectionName);
+        if (!databaseAndCollectionExist) {
             logger.log(Level.SEVERE, "ERROR: Database or Collection does not exist");
             throw new RuntimeException("ERROR: Database or Collection does not exist");
         }
@@ -343,14 +346,12 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         List<Document> indexes = (List<Document>) collection.listIndexes().into(new ArrayList<>());
         Document stats = database.runCommand(new Document("collStats", collectionName).append("indexDetails", true));
 
-        //final
-
         int numOfDocs = stats.getInteger("count");
         Document indexSizes = (Document) stats.get("indexSizes");
         Document key;
         String indexName;
-        ArrayList<String> indexFields;
-        ArrayList<Index> idealIndex;
+        List<String> indexFields;
+        List<Index> idealIndex;
         int currentIndexSize;
         int idealIndexSize;
         ReadLink read = new ReadLink();
@@ -367,12 +368,8 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
             currentIndexSize = indexSizes.getInteger(indexName);
 
             try {
-                idealIndex = (ArrayList<Index>) findIndexSizeHelper(indexFields, numOfDocs, false, jsonArray);
-            } catch (JSONException e) {
-                terminate();
-                logger.log(Level.SEVERE, "An error occurred", e);
-                throw new RuntimeException(e);
-            } catch (IOException e) {
+                idealIndex = findIndexSizeHelper(indexFields, numOfDocs, false, jsonArray);
+            } catch (JSONException | IOException e) {
                 terminate();
                 logger.log(Level.SEVERE, "An error occurred", e);
                 throw new RuntimeException(e);
@@ -380,11 +377,10 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
 
             if (idealIndex.size() == 0) {
                 return new ArrayList<>();
-            }
-            else{
+            } else {
                 idealIndexSize = idealIndex.get(0).size;
                 if (currentIndexSize > 1.5 * idealIndexSize) {
-                    FaultyIndex faultyIndex = new FaultyIndex(indexName,currentIndexSize,idealIndexSize);
+                    FaultyIndex faultyIndex = new FaultyIndex(indexName, currentIndexSize, idealIndexSize);
                     faultyIndexes.add(faultyIndex);
                 }
             }
@@ -392,4 +388,5 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
 
         return faultyIndexes;
     }
+
 }
