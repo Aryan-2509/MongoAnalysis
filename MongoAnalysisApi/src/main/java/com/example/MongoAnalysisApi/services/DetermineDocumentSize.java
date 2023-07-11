@@ -13,7 +13,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Component
-public class DetermineDocumentSize {
+public class DetermineDocumentSize implements DetermineDocumentSizeService{
 
     private static HashMap<String, Integer> primitiveDataTypes = new HashMap<>();
 
@@ -30,7 +30,6 @@ public class DetermineDocumentSize {
     private static final Logger logger = Logger.getLogger(DetermineDocumentSize.class.getName());
 
     private static int processClass(Class<?> LoadedClass){
-
         Class<?> targetClass = LoadedClass;
         int size = 0;
 
@@ -71,7 +70,6 @@ public class DetermineDocumentSize {
                     size += 10;
                     break;
                 default:{
-
                     String className = dataType;
                     String classNamePath = "com.example.MongoAnalysisApi." + className;
 
@@ -168,20 +166,18 @@ public class DetermineDocumentSize {
     private static int processJSONObject(JSONObject jsonObject) throws JSONException {
         int size = 0;
 
-        if (jsonObject.has("fieldName")){
+        if (jsonObject.has("fieldName")) {
             String fieldName = jsonObject.getString("fieldName");
             size += fieldName.length();
 
-            if(jsonObject.has("isList")){
+            if (jsonObject.has("isList")) {
                 boolean isList = jsonObject.getBoolean("isList");
-                if(isList){
-                    if(jsonObject.has("list")){
-                        JSONArray jsonArray = (JSONArray) jsonObject.get("list");
-                        int ListSize = processJSONArray(jsonArray);
-                        size += ListSize + 7;
-                    }
-                    else{
-                        logger.log(Level.SEVERE, "ERROR: List absent from input");
+                if (isList) {
+                    if (jsonObject.has("list")) {
+                        JSONArray jsonArray = jsonObject.getJSONArray("list");
+                        int listSize = processJSONArray(jsonArray);
+                        size += listSize + 7;
+                    } else {
                         throw new RuntimeException("ERROR: List absent from input");
                     }
                     return size;
@@ -194,30 +190,24 @@ public class DetermineDocumentSize {
                 String fieldType = jsonObject.getString("fieldType");
                 String fieldTypeCapital = fieldType.toUpperCase();
 
-                if(primitiveDataTypes.containsKey(fieldTypeCapital)){
+                if (primitiveDataTypes.containsKey(fieldTypeCapital)) {
                     size += primitiveDataTypes.get(fieldTypeCapital);
-                }
-                else if(fieldTypeCapital.equals("ARRAY") || fieldTypeCapital.equals("ARRAYLIST") || fieldTypeCapital.equals("ARRAYLIST")){
-                    logger.log(Level.SEVERE, "ERROR: isList marked false");
+                } else if (fieldTypeCapital.equals("ARRAY") || fieldTypeCapital.equals("ARRAYLIST")) {
                     throw new RuntimeException("ERROR: isList marked false");
-                }
-                else if(fieldTypeCapital.equals("STRING")){
-                    if(jsonObject.has("inputString")){
+                } else if (fieldTypeCapital.equals("STRING")) {
+                    if (jsonObject.has("inputString")) {
                         String inputString = jsonObject.getString("inputString");
                         size += inputString.length() + 7;
                     }
-                }
-                else{
+                } else {
                     classRequired = true;
                 }
-            }
-            else{
+            } else {
                 classRequired = true;
             }
 
-            if(classRequired){
-
-                if(jsonObject.has("class")){
+            if (classRequired) {
+                if (jsonObject.has("class")) {
                     String classNamePath = jsonObject.getString("class");
                     String className = classNamePath;
 
@@ -225,47 +215,43 @@ public class DetermineDocumentSize {
                         Class<?> loadedClass = Class.forName(classNamePath);
                         int inputSize = processClass(loadedClass);
                         size += inputSize + 7;
-
                     } catch (ClassNotFoundException e) {
-                        logger.log(Level.SEVERE, "ERROR: Class not found");
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("ERROR: Class not found", e);
                     }
-                }
-                else{
-                    logger.log(Level.SEVERE, "ERROR: Class not provided");
+                } else {
                     throw new RuntimeException("ERROR: Class not provided");
                 }
             }
-        }
-        else{
-            logger.log(Level.SEVERE, "ERROR: FieldName not found");
+        } else {
             throw new RuntimeException("ERROR: FieldName not found");
         }
 
         return size;
     }
 
+
     private static int findSize(String url) {
         ReadLink read = new ReadLink();
         JSONObject jsonObject = read.getJSONObject(url);
         int size;
+
         try {
             size = processJSONObject(jsonObject);
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+
         return size;
     }
 
+    @Override
     public int findDocumentSize(String classPath){
         int size = 0;
 
         try {
             Class<?> loadedClass = Class.forName(classPath);
-
             int inputSize = processClass(loadedClass);
             size += inputSize + 5;
-
         } catch (ClassNotFoundException e) {
             logger.log(Level.SEVERE, "ERROR: Failed to load Class");
             throw new RuntimeException(e);
@@ -273,6 +259,8 @@ public class DetermineDocumentSize {
 
         return size;
     }
+
+    @Override
     public int findOverhead(String url) {
         return findSize(url);
     }
