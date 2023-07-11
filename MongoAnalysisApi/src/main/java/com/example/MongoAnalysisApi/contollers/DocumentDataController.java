@@ -24,18 +24,4 @@ public class DocumentDataController {
         return determineDocumentSize.findDocumentSize(classPath);
     }
 
-//    @Autowired
-//    private DetermineDocumentSizeService determineDocumentSizeService;
-//
-//    @GetMapping("/doc")
-//    public int GetOverhead(@RequestParam("url") String url) {
-//
-//        return determineDocumentSizeService.getOverhead(url);
-//    }
-//
-//    @GetMapping("/class")
-//    public int GetDocumentSize(@RequestParam("classPath") String classPath) {
-//
-//        return determineDocumentSizeService.getDocumentSize(classPath);
-//    }
 }
