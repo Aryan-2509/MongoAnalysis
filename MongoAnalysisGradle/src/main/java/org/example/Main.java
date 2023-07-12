@@ -1,26 +1,33 @@
 package org.example;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import org.json.JSONException;
-import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
 
 public class Main {
 
-    public static void main(String[] args) throws JSONException, JsonProcessingException {
+    public static void ShutdownFunction(){
+        DetermineIndexSize object = new DetermineIndexSize();
+        object.terminate();
+    }
 
-//        CALCULATE DOCUMENT SIZE
-//        DetermineDocumentSizeMapper objectMapper = new DetermineDocumentSizeMapper();
-//        int size = objectMapper.findDocumentSize(URL OF JSON OBJECT);
-//        DetermineDocumentSize object = new DetermineDocumentSize();
-//        int size = object.findDocumentSize(URL OF JSON OBJECT);
-//        int overhead = det.findOverhead(URL OF JSON DOCUMENT);
+    public static void main(String[] args) {
 
-//        DETERMINE INDEX SIZE OF ALL PERMUTATIONS OVER GIVEN FIELDS
-//        DetermineIndexSize obj = new DetermineIndexSize();
-//        List<Index> allIndexes = obj.findIndexSize(URL OF JSON ARRAY,INDEX ARRAY,NUMBER OF DOCUMENTS,PERMUTATION REQUIRED OR NOT);
-//        List<IndexOverhead> allIndexes = obj.findOverhead(URL OF JSON ARRAY,INDEX ARRAY,NUMBER OF DOCUMENTS,FIELD TO BE ADDED IN THE INDEX);
-//        List<FaultyIndex> allIndexes = obj.indexDiagnosis(URL OF JSON ARRAY,DATABASE NAME,COLLECTION NAME);
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            ShutdownFunction();
+        }));
+
+        String url1 = "https://raw.githubusercontent.com/Aryan-2509/Data/master/1.json";
+        String url2 = "https://raw.githubusercontent.com/Aryan-2509/Data/master/sprinklr.employee8.json";
+        String url3 = "https://raw.githubusercontent.com/Aryan-2509/Data/master/sprinklr.employee4.json";
+
+        List<String> indexArray1 = new ArrayList<>();
+        indexArray1.add("isRead");
+        indexArray1.add("senderId");
+
+        DetermineIndexSize obj = new DetermineIndexSize();
+
+//        obj.findIndexSize(url2,indexArray1,5000000,true);
+//        obj.findOverhead(url2,indexArray,1000000,"senderName");
+//        obj.indexDiagnosis(url3,"sprinklr","employee4");
     }
 }

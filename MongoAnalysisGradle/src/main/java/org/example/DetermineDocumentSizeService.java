@@ -1,6 +1,6 @@
 package org.example;
 
 public interface DetermineDocumentSizeService {
-    public int findDocumentSize(String url);
-    public int findOverhead(String url);
+    public void findDocumentSize(String url);
+    public void findOverhead(String url);
 }

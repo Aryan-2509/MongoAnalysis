@@ -13,6 +13,8 @@ import java.util.logging.Logger;
 public class DetermineDocumentSize implements DetermineDocumentSizeService{
     private static final Logger logger = Logger.getLogger(DetermineDocumentSize.class.getName());
 
+    private static ExcelWriter excelWriter = new ExcelWriter();
+
     private static boolean isMongoDBIsoDate(String value) {
         try {
             LocalDateTime.parse(value, DateTimeFormatter.ISO_DATE_TIME);
@@ -147,12 +149,16 @@ public class DetermineDocumentSize implements DetermineDocumentSizeService{
     }
 
     @Override
-    public int findDocumentSize(String url) {
-        return findSize(url) + 5;
+    public void findDocumentSize(String url) {
+
+        int documentSize = findSize(url) + 5;
+        excelWriter.WriteInteger(documentSize);
     }
 
     @Override
-    public int findOverhead(String url) {
-        return findSize(url);
+    public void findOverhead(String url) {
+
+        int overhead =  findSize(url);
+        excelWriter.WriteInteger(overhead);
     }
 }

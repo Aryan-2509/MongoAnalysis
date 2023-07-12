@@ -16,12 +16,13 @@ import java.util.logging.Logger;
 
 public class DetermineIndexSize implements DetermineIndexSizeService{
     private static final Logger logger = Logger.getLogger(DetermineIndexSize.class.getName());
+    private static ExcelWriter excelWriter = new ExcelWriter();
     private static MongoClient client = MongoClients.create("mongodb://localhost:27017");
     private static MongoDatabase database = client.getDatabase("sprinklr");
     private static String collectionName = "test2";
     private static MongoCollection<Document> collection = database.getCollection(collectionName);
 
-    private static void terminate(){
+    public static void terminate(){
         collection.deleteMany(new Document());
         collection.dropIndexes();
     }
@@ -145,7 +146,6 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         return false;
     }
 
-
     private static int getIndexSizeCollStats(String indexName){
         Document stats = database.runCommand(new Document("collStats", collectionName).append("indexDetails", true));
         Document indexDetails = (Document) stats.get("indexSizes");
@@ -229,7 +229,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
     // public static IndexColl{
 
     @Override
-    public List<IndexOverhead> findOverhead(String url, List<String> indexArray, int numOfDocs, String field) {
+    public void findOverhead(String url, List<String> indexArray, int numOfDocs, String field) {
         List<List<String>> permutations = new ArrayList<>();
         ArrayList<IndexOverhead> allIndexes = new ArrayList<>();
         ReadLink read = new ReadLink();
@@ -254,22 +254,28 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
 
         indexArray.remove(indexArray.size() - 1);
         permutations.add(indexArray);
-
-        for (int position = 0; position <= indexArraySize; position++) {
-            ArrayList<String> index = new ArrayList<>();
-
-            for (int j = 0; j < indexArraySize; j++) {
-                if (j == position) {
-                    index.add(field);
-                }
-                index.add(indexArray.get(j));
-            }
-
-            if (position == indexArraySize) {
-                index.add(field);
-            }
-            permutations.add(index);
+        List<String> newIndexArray = new ArrayList<>();
+        for(String fieldName : indexArray){
+            newIndexArray.add(fieldName);
         }
+        newIndexArray.add(field);
+        permutations.add(newIndexArray);
+
+//        for (int position = 0; position <= indexArraySize; position++) {
+//            ArrayList<String> index = new ArrayList<>();
+//
+//            for (int j = 0; j < indexArraySize; j++) {
+//                if (j == position) {
+//                    index.add(field);
+//                }
+//                index.add(indexArray.get(j));
+//            }
+//
+//            if (position == indexArraySize) {
+//                index.add(field);
+//            }
+//            permutations.add(index);
+//        }
 
         boolean sparse = checkSparse(jsonArray, permutations.get(1));
 
@@ -298,13 +304,13 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         }
 
         Collections.sort(allIndexes);
-        return allIndexes;
+        excelWriter.WriteIndexOverhead(allIndexes);
     }
 
 
     // name
     @Override
-    public List<Index> findIndexSize(String url, List<String> indexArray, int numOfDocs, boolean permutation) {
+    public void findIndexSize(String url, List<String> indexArray, int numOfDocs, boolean permutation) {
         ReadLink read = new ReadLink();
         JSONArray jsonArray = read.getJSONArray(url);
 
@@ -322,7 +328,9 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         }
 
         try {
-            return findIndexSizeHelper(indexArray, numOfDocs, permutation, jsonArray);
+            List<Index> allIndexes = findIndexSizeHelper(indexArray, numOfDocs, permutation, jsonArray);
+            excelWriter.WriteIndex(allIndexes);
+            //return findIndexSizeHelper(indexArray, numOfDocs, permutation, jsonArray);
         } catch (JSONException e) {
             logger.log(Level.SEVERE, "ERROR: ", e);
             throw new RuntimeException(e);
@@ -334,7 +342,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
 
 
     @Override
-    public List<FaultyIndex> indexDiagnosis(String path, String databaseName, String collectionName) {
+    public void indexDiagnosis(String path, String databaseName, String collectionName) {
         boolean databaseAndCollectionExist = checkDatabaseAndCollectionExistence(databaseName, collectionName);
         if (!databaseAndCollectionExist) {
             logger.log(Level.SEVERE, "ERROR: Database or Collection does not exist");
@@ -376,7 +384,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
             }
 
             if (idealIndex.size() == 0) {
-                return new ArrayList<>();
+                return;
             } else {
                 idealIndexSize = idealIndex.get(0).size;
                 if (currentIndexSize > 1.5 * idealIndexSize) {
@@ -386,7 +394,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
             }
         }
 
-        return faultyIndexes;
+        excelWriter.WriteFaultyIndex(faultyIndexes);
     }
 
 }
