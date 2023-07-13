@@ -6,7 +6,11 @@ import org.json.JSONObject;
 import org.json.JSONTokener;
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.logging.Level;
@@ -20,7 +24,14 @@ public class ReadLink {
         BufferedReader reader = null;
 
         try {
-            URL url = new URL(urlString);
+            URI uri = null;
+            try {
+                uri = new URI(urlString);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+            URL url = uri.toURL();
+            //URL url = new URL(urlString);
             reader = new BufferedReader(new InputStreamReader(url.openStream()));
             String line;
             while ((line = reader.readLine()) != null) {
@@ -52,7 +63,14 @@ public class ReadLink {
         JSONObject jsonObject = null;
 
         try {
-            URL url = new URL(inputUrl);
+            URI uri = null;
+            try {
+                uri = new URI(inputUrl);
+            } catch (URISyntaxException e) {
+                throw new RuntimeException(e);
+            }
+            URL url = uri.toURL();
+            //URL url = new URL(inputUrl);
             BufferedReader reader = new BufferedReader(new InputStreamReader(url.openStream(), StandardCharsets.UTF_8));
             StringBuilder jsonString = new StringBuilder();
             String line;
@@ -76,4 +94,52 @@ public class ReadLink {
         }
         return jsonObject;
     }
+
+//    public JSONObject getJSONObject(String inputUrl) {
+//        JSONObject jsonObject = null;
+//
+//        try {
+//            String urlString = "https://example.com/api/data.json"; // Replace with your URL
+//            URI uri = null;
+//            try {
+//                uri = new URI(urlString);
+//            } catch (URISyntaxException e) {
+//                throw new RuntimeException(e);
+//            }
+//
+//            HttpURLConnection connection = (HttpURLConnection) uri.toURL().openConnection();
+//            connection.setRequestMethod("GET");
+//
+//            int responseCode = connection.getResponseCode();
+//            if (responseCode == HttpURLConnection.HTTP_OK) {
+//
+//                BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+//                StringBuilder jsonContent = new StringBuilder();
+//                String line;
+//                while ((line = reader.readLine()) != null) {
+//                    jsonContent.append(line);
+//                }
+//                reader.close();
+//
+//                // Parse the JSON content into a JSONObject
+//                try {
+//                    jsonObject = new JSONObject(jsonContent.toString());
+//                } catch (JSONException e) {
+//                    throw new RuntimeException(e);
+//                }
+//
+//            } else {
+//                logger.log(Level.SEVERE, "An error occurred : " + responseCode);
+//                throw new RuntimeException("ERROR: " + responseCode);
+//            }
+//
+//            connection.disconnect();
+//        } catch (IOException e) {
+//            logger.log(Level.SEVERE, "An error occurred", e);
+//            throw new RuntimeException(e);
+//        }
+//
+//        return jsonObject;
+//    }
+
 }

@@ -1,6 +1,7 @@
 package com.example.demoapi.contollers;
 
 import com.example.demoapi.services.DetermineDocumentSize;
+import com.example.demoapi.services.DetermineIndexSize;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -12,7 +13,10 @@ public class DocumentDataController {
     @Autowired
     private DetermineDocumentSize determineDocumentSize;
 
-    @GetMapping("/overhead")
+    @Autowired
+    private DetermineIndexSize determineIndexSize;
+
+    @GetMapping("doc/overhead")
     public void GetOverhead(@RequestParam("url") String url) {
 
         determineDocumentSize.findOverhead(url);
@@ -22,5 +26,26 @@ public class DocumentDataController {
     public void GetDocumentSize(@RequestParam("url") String url) {
 
         determineDocumentSize.findDocumentSize(url);
+    }
+
+    //localhost:8080/index?url=https://raw.githubusercontent.com/Aryan-2509/Data/master/findIndexSizeInput.json
+    @GetMapping("/index")
+    public void GetIndexSize(@RequestParam("url") String url) {
+
+        determineIndexSize.findIndexSize(url);
+    }
+
+    //localhost:8080/index/diagnosis?url=https://raw.githubusercontent.com/Aryan-2509/Data/master/indexDiagnosisInput.json
+    @GetMapping("/index/diagnosis")
+    public void GetIndexDiagnosis(@RequestParam("url") String url) {
+
+        determineIndexSize.indexDiagnosis(url);
+    }
+
+    //localhost:8080/index/overhead?url=https://raw.githubusercontent.com/Aryan-2509/Data/master/findIndexOverhead.json
+    @GetMapping("/index/overhead")
+    public void GetIndexOverhead(@RequestParam("url") String url) {
+
+        determineIndexSize.findOverhead(url);
     }
 }
