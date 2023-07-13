@@ -11,20 +11,20 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 import org.springframework.stereotype.Component;
-
 import java.io.IOException;
 import java.util.*;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
 @Component
-public class DetermineIndexSize {
+public class DetermineIndexSize implements DetermineIndexSizeService{
     private static final Logger logger = Logger.getLogger(DetermineIndexSize.class.getName());
-    private static ExcelWriter excelWriter = new ExcelWriter();
-    private static MongoClient client = MongoClients.create("mongodb://localhost:27017");
-    private static MongoDatabase database = client.getDatabase("sprinklr");
-    private static String collectionName = "test2";
-    private static MongoCollection<Document> collection = database.getCollection(collectionName);
+    private static final ExcelWriter excelWriter = new ExcelWriter();
+    private static final ReadLink read = new ReadLink();
+    private static final MongoClient client = MongoClients.create("mongodb://localhost:27017");
+    private static final MongoDatabase database = client.getDatabase("sprinklr");
+    private static final String collectionName = "test2";
+    private static final MongoCollection<Document> collection = database.getCollection(collectionName);
 
     public static void terminate(){
         collection.deleteMany(new Document());
@@ -59,8 +59,7 @@ public class DetermineIndexSize {
         if (!databaseExists) {
             return false;
         }
-        boolean collectionExists = database.listCollectionNames().into(new ArrayList<>()).contains(collectionName);
-        return collectionExists;
+        return database.listCollectionNames().into(new ArrayList<>()).contains(collectionName);
     }
 
     boolean areFieldsPresent(JSONArray jsonArray, List<String> indexArray) {
@@ -198,7 +197,6 @@ public class DetermineIndexSize {
         return numOfDocs - 2;
     }
 
-
     private List<Index> findIndexSizeHelper(List<String> indexArray, int numOfDocs, boolean permutation, JSONArray jsonArray) throws JSONException, IOException {
         ArrayList<Index> allIndexes = new ArrayList<>();
         boolean sparse = checkSparse(jsonArray, indexArray);
@@ -231,18 +229,17 @@ public class DetermineIndexSize {
         return allIndexes;
     }
 
-
-    public void findOverhead(String url) {
-        ReadLink read = new ReadLink();
-        JSONObject jsonObject = read.getJSONObject(url);
-        String documentsUrl;
-
+    private static String getUrl(JSONObject jsonObject){
         try {
-            documentsUrl = jsonObject.getString("url");
+            return jsonObject.getString("url");
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
+
+    private static List<String> getIndexArray(JSONObject jsonObject){
         List<String> indexArray = new ArrayList<>();
+
         try {
             JSONArray jsonArray = jsonObject.getJSONArray("indexArray");
             for(int i = 0 ; i < jsonArray.length() ; i++)
@@ -250,29 +247,55 @@ public class DetermineIndexSize {
                 indexArray.add(jsonArray.getString(i));
             }
         } catch (JSONException e) {
+            logger.log(Level.SEVERE, "ERROR : Error reading the indexArray");
             throw new RuntimeException(e);
         }
+        return indexArray;
+    }
 
-        int numOfDocs;
+    private int getNumOfDocs(JSONObject jsonObject){
         try {
-            numOfDocs = jsonObject.getInt("numOfDocs");
+            return jsonObject.getInt("numOfDocs");
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
-        String field = null;
+    }
+
+    private static String getField(JSONObject jsonObject){
         try {
-            field = jsonObject.getString("field");
+            return jsonObject.getString("field");
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
+    }
 
+    private static boolean getPermutation(JSONObject jsonObject){
+        try {
+            return jsonObject.getBoolean("permutation");
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
 
+    private static String getPath(JSONObject jsonObject){
+        try {
+            return jsonObject.getString("path");
+        } catch (JSONException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
+@Override
+    public void findOverhead(String url) {
+        JSONObject jsonObject = read.getJSONObject(url);
+        String documentsUrl = getUrl(jsonObject);
+        List<String> indexArray = getIndexArray(jsonObject);
+        int numOfDocs = getNumOfDocs(jsonObject);
+        String field = getField(jsonObject);
         List<List<String>> permutations = new ArrayList<>();
         ArrayList<IndexOverhead> allIndexes = new ArrayList<>();
         JSONArray jsonArray = read.getJSONArray(documentsUrl);
-        int indexArraySize = indexArray.size();
         int originalSize = 0;
-        int numOfDocsLocal;
 
         indexArray.add(field);
         boolean fieldsPresent = areFieldsPresent(jsonArray, indexArray);
@@ -296,24 +319,6 @@ public class DetermineIndexSize {
         }
         newIndexArray.add(field);
         permutations.add(newIndexArray);
-
-//        for (int position = 0; position <= indexArraySize; position++) {
-//            ArrayList<String> index = new ArrayList<>();
-//
-//            for (int j = 0; j < indexArraySize; j++) {
-//                if (j == position) {
-//                    index.add(field);
-//                }
-//                index.add(indexArray.get(j));
-//            }
-//
-//            if (position == indexArraySize) {
-//                index.add(field);
-//            }
-//            permutations.add(index);
-//        }
-
-        boolean sparse = checkSparse(jsonArray, permutations.get(1));
 
         for (int i = 0; i < permutations.size(); i++) {
             try {
@@ -343,40 +348,14 @@ public class DetermineIndexSize {
         excelWriter.WriteIndexOverhead(allIndexes);
     }
 
-
+@Override
     public void findIndexSize(String url) {
-        ReadLink read = new ReadLink();
         JSONObject jsonObject = read.getJSONObject(url);
-        String documentsUrl;
-        try {
-            documentsUrl = jsonObject.getString("url");
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        List<String> indexArray = new ArrayList<>();
-        try {
-            JSONArray jsonArray = jsonObject.getJSONArray("indexArray");
-            for(int i = 0 ; i < jsonArray.length() ; i++)
-            {
-                indexArray.add(jsonArray.getString(i));
-            }
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        int numOfDocs = 0;
-        try {
-            numOfDocs = jsonObject.getInt("numOfDocs");
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        boolean permutation = false;
-        try {
-            permutation = jsonObject.getBoolean("permutation");
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
+        String documentsUrl = getUrl(jsonObject);
+        List<String> indexArray = getIndexArray(jsonObject);
+        int numOfDocs = getNumOfDocs(jsonObject);
+        boolean permutation = getPermutation(jsonObject);
         JSONArray jsonArray = read.getJSONArray(documentsUrl);
-
         boolean fieldsPresent = areFieldsPresent(jsonArray, indexArray);
         boolean duplicateFields = checkDuplicateFields(indexArray);
 
@@ -393,7 +372,6 @@ public class DetermineIndexSize {
         try {
             List<Index> allIndexes = findIndexSizeHelper(indexArray, numOfDocs, permutation, jsonArray);
             excelWriter.WriteIndex(allIndexes);
-            //return findIndexSizeHelper(indexArray, numOfDocs, permutation, jsonArray);
         } catch (JSONException e) {
             logger.log(Level.SEVERE, "ERROR: ", e);
             throw new RuntimeException(e);
@@ -404,24 +382,25 @@ public class DetermineIndexSize {
     }
 
 
-
+@Override
     public void indexDiagnosis(String url) {
-        ReadLink read = new ReadLink();
         JSONObject jsonObject = read.getJSONObject(url);
+        String path = getPath(jsonObject);
+        String databaseName;
+        String collectionName;
+        Document key;
+        String indexName;
+        List<String> indexFields;
+        List<Index> idealIndex;
+        int currentIndexSize;
+        int idealIndexSize;
 
-        String path = null;
-        try {
-            path = jsonObject.getString("path");
-        } catch (JSONException e) {
-            throw new RuntimeException(e);
-        }
-        String databaseName = null;
         try {
             databaseName = jsonObject.getString("databaseName");
         } catch (JSONException e) {
             throw new RuntimeException(e);
         }
-        String collectionName = null;
+
         try {
             collectionName = jsonObject.getString("collectionName");
         } catch (JSONException e) {
@@ -441,12 +420,6 @@ public class DetermineIndexSize {
 
         int numOfDocs = stats.getInteger("count");
         Document indexSizes = (Document) stats.get("indexSizes");
-        Document key;
-        String indexName;
-        List<String> indexFields;
-        List<Index> idealIndex;
-        int currentIndexSize;
-        int idealIndexSize;
         JSONArray jsonArray = read.getJSONArray(path);
         List<FaultyIndex> faultyIndexes = new ArrayList<>();
 

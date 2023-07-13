@@ -1,13 +1,7 @@
 package com.example.demoapi.services;
 
-
 import com.example.demoapi.ExcelWriter;
 import com.example.demoapi.ReadLink;
-import com.mongodb.client.MongoClient;
-import com.mongodb.client.MongoClients;
-import com.mongodb.client.MongoCollection;
-import com.mongodb.client.MongoDatabase;
-import org.bson.Document;
 import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
@@ -18,13 +12,12 @@ import java.util.Iterator;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 @Component
 public class DetermineDocumentSize implements DetermineDocumentSizeService{
 
     private static final Logger logger = Logger.getLogger(DetermineDocumentSize.class.getName());
 
-    private static ExcelWriter excelWriter = new ExcelWriter();
+    private static final ExcelWriter excelWriter = new ExcelWriter();
 
     private static boolean isMongoDBIsoDate(String value) {
         try {

@@ -28,21 +28,18 @@ public class DocumentDataController {
         determineDocumentSize.findDocumentSize(url);
     }
 
-    //localhost:8080/index?url=https://raw.githubusercontent.com/Aryan-2509/Data/master/findIndexSizeInput.json
     @GetMapping("/index")
     public void GetIndexSize(@RequestParam("url") String url) {
 
         determineIndexSize.findIndexSize(url);
     }
 
-    //localhost:8080/index/diagnosis?url=https://raw.githubusercontent.com/Aryan-2509/Data/master/indexDiagnosisInput.json
     @GetMapping("/index/diagnosis")
     public void GetIndexDiagnosis(@RequestParam("url") String url) {
 
         determineIndexSize.indexDiagnosis(url);
     }
 
-    //localhost:8080/index/overhead?url=https://raw.githubusercontent.com/Aryan-2509/Data/master/findIndexOverhead.json
     @GetMapping("/index/overhead")
     public void GetIndexOverhead(@RequestParam("url") String url) {
 
