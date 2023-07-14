@@ -62,35 +62,6 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         return database.listCollectionNames().into(new ArrayList<>()).contains(collectionName);
     }
 
-    boolean areFieldsPresent(JSONArray jsonArray, List<String> indexArray) {
-        for (String fieldName : indexArray) {
-            if (fieldName == null) {
-                logger.log(Level.SEVERE, "ERROR: Field name can't be Null");
-                throw new RuntimeException("ERROR: Field name can't be Null");
-            }
-
-            boolean isFieldPresent = false;
-            for (int i = 0; i < jsonArray.length(); i++) {
-                JSONObject document;
-                try {
-                    document = jsonArray.getJSONObject(i);
-                    if (document.has(fieldName)) {
-                        isFieldPresent = true;
-                        break;
-                    }
-                } catch (JSONException e) {
-                    throw new RuntimeException(e);
-                }
-            }
-
-            if (!isFieldPresent) {
-                return false;
-            }
-        }
-
-        return true;
-    }
-
     boolean checkDuplicateFields(List<String> indexArray){
         HashSet<String> set = new HashSet<>();
 
@@ -298,13 +269,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         int originalSize = 0;
 
         indexArray.add(field);
-        boolean fieldsPresent = areFieldsPresent(jsonArray, indexArray);
         boolean duplicateFields = checkDuplicateFields(indexArray);
-
-        if (!fieldsPresent) {
-            logger.log(Level.SEVERE, "Error: Field absent from data");
-            throw new RuntimeException("Error: Field absent from data");
-        }
 
         if (duplicateFields) {
             logger.log(Level.SEVERE, "Error: Repeated field names found");
@@ -356,13 +321,7 @@ public class DetermineIndexSize implements DetermineIndexSizeService{
         int numOfDocs = getNumOfDocs(jsonObject);
         boolean permutation = getPermutation(jsonObject);
         JSONArray jsonArray = read.getJSONArray(documentsUrl);
-        boolean fieldsPresent = areFieldsPresent(jsonArray, indexArray);
         boolean duplicateFields = checkDuplicateFields(indexArray);
-
-        if (!fieldsPresent) {
-            logger.log(Level.SEVERE, "ERROR: Field absent from data");
-            throw new RuntimeException("ERROR: Field absent from data");
-        }
 
         if (duplicateFields) {
             logger.log(Level.SEVERE, "ERROR: Repeated field names found");
